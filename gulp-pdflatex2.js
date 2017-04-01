@@ -1,4 +1,5 @@
 /**
+ * Gulp plugin for compiling LaTeX files into PDF files.
  * @author alvin@omgimanerd.tech
  */
 
@@ -11,25 +12,16 @@ const tmp = require('tmp');
 
 const PluginError = gutil.PluginError;
 
-/**
- * Given an Error or a message, this function returns a gutil.PluginError
- * for throwing.
- * @param {Error|string} data The Error object or string to format
- * @return {gutil.PluginError}
- */
-var getError = function(data) {
-  if (!(data instanceof Error)) {
-    data = new Error(data);
-  }
-  data.message = 'gulp-pdflatex2: ' + data.message;
-  return new gutil.PluginError('gulp-pdflatex2', data);
-};
+const PLUGIN_NAME = 'gulp-pdflatex2';
 
 var pdflatex2 = function(options = {}) {
-  var contextError = null;
+  var stdout = '';
+  var stderr = '';
+  var originalFilePath = null;
   var stream = through.obj(function(file, encoding, callback) {
+    originalFilePath = file.path;
     var filePath = path.parse(file.path);
-    var texInputs = (options.texInputs || []).concat([file.base]).map((dir) => {
+    var texInputs = (options.texInputs || []).map((dir) => {
       return path.resolve(process.cwd(), dir);
     }).join(':');
     if (process.env.TEXINPUTS) {
@@ -38,56 +30,65 @@ var pdflatex2 = function(options = {}) {
       process.env.TEXINPUTS = texInputs;
     };
     if (file.isNull()) {
-      return callback(`Null file ${filePath.base} received!`, file);
+      return callback(new Error(`Null file ${filePath.base} received!`), file);
     }
     tmp.dir({ unsafeCleanup: true }, function(error, tmpDir, cleanup) {
       if (error) {
         return callback(error, file);
       }
-      pdflatex = child_process.spawn('/usr/bin/pdflatex', [
-        '-shell-escape',
+      pdflatex = child_process.spawn('pdflatex', [
         '-file-line-error',
         '-halt-on-error',
         `-output-directory=${tmpDir}`,
         file.path
       ], {
-        env: process.env.TEXINPUTS
+        cwd: tmpDir,
+        env: process.env
       });
-      var output = [];
-      pdflatex.stdout.on('data', function(data) {
-        output.push(data);
-      });
+      pdflatex.stdout.on('data', function(data) { stdout += data; });
+      pdflatex.stderr.on('data', function(data) { stderr += data; });
       pdflatex.on('close', function(code) {
         var outputPath = path.join(tmpDir, filePath.name + '.pdf');
-        filePath.base = null;
-        filePath.ext = '.pdf';
-        file.path = path.format(filePath);
+        file.path = path.format({
+          dir: filePath.dir,
+          name: filePath.name,
+          ext: '.pdf'
+        });
         if (file.isStream()) {
           try {
             file.contents = fs.createReadStream(outputPath);
           } catch (readStreamError) {
-            return callback(readStreamError, file);
+            error = readStreamError;
           }
         } else if (file.isBuffer()) {
           try {
             file.contents = fs.readFileSync(outputPath);
           } catch (readFileError) {
-            return callback(readFileError, file);
+            error = readFileError;
           }
         } else {
-          cleanup();
-          callback(getError(`Error compiling ${filePath.base}!`), file);
+          error = `Error compiling ${p}!`;
         }
         cleanup();
-        callback(null, file);
+        callback(error, file);
+        if (!error) {
+          gutil.log(
+            gutil.colors.green('Successfully compiled'),
+            gutil.colors.cyan(originalFilePath)
+          );
+        }
       });
     });
   }).on('error', function(error) {
-    contextError = error;
+    gutil.log(
+      gutil.colors.red('Error compiling'),
+      gutil.colors.cyan(originalFilePath)
+    );
+    if (error.code === 'ENOENT') {
+      gutil.log(gutil.colors.red('pdflatex output:'), '\n' + stdout);
+    }
+    throw new gutil.PluginError(PLUGIN_NAME, error);
   });
-  if (contextError) {
-    throw getError(contextError);
-  }
   return stream;
 };
 

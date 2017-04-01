@@ -4,9 +4,6 @@
   "description": "A gulp-plugin for compiling .tex files to .pdf files",
   "main": "gulp-pdflatex2.js",
   "dependencies": {
-    "gulp": "^3.9.1",
-    "gulp-print": "^2.0.1",
-    "gulp-rename": "^1.2.2",
     "gulp-util": "^3.0.8",
     "through2": "^2.0.3",
     "tmp": "^0.0.31"
@@ -20,7 +17,9 @@
     "url": "git+ssh://git@github.com/omgimanerd/gulp-pdflatex2.git"
   },
   "keywords": [
-    "gulpplugin"
+    "gulpplugin",
+    "latex",
+    "pdflatex"
   ],
   "author": "omgimanerd <alvin@omgimanerd.tech> (http://omgimanerd.tech)",
   "license": "MIT",

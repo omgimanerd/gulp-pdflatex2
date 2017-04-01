@@ -12,7 +12,6 @@ gulp.task('default', ['test']);
 
 gulp.task('test', function() {
   return gulp.src('./*.tex')
-    .pipe(print())
     .pipe(pdflatex({
       // texInputs: ['./latex/cls']
     }))
