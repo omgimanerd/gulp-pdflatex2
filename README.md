@@ -1,4 +1,13 @@
 # gulp-pdflatex2
+[![npm](https://img.shields.io/npm/v/gulp-pdflatex2.svg)](https://www.npmjs.com/package/gulp-pdflatex2)
+[![npm](https://img.shields.io/npm/l/gulp-pdflatex2.svg)](https://spdx.org/licenses/MIT)
+[![npm](https://img.shields.io/npm/dt/gulp-pdflatex2.svg)]([![npm](https://img.shields.io/npm/v/npm.svg)](https://www.npmjs.com/package/gulp-pdflatex2))
+[![GitHub pull requests](https://img.shields.io/github/issues-pr/omgimanerd/gulp-pdflatex2.svg)](https://github.com/omgimanerd/gulp-pdflatex2/pulls)
+[![GitHub issues](https://img.shields.io/github/issues/omgimanerd/gulp-pdflatex2.svg)](https://github.com/omgimanerd/gulp-pdflatex2/issues)
+
+[![GitHub watchers](https://img.shields.io/github/watchers/omgimanerd/gulp-pdflatex2.svg?style=social&label=Watch)](https://github.com/omgimanerd/gulp-pdflatex2/watchers)
+[![GitHub forks](https://img.shields.io/github/forks/omgimanerd/gulp-pdflatex2.svg?style=social&label=Fork)](https://github.com/omgimanerd/gulp-pdflatex2/fork)
+
 gulp-pdflatex2 is a wrapper around `pdflatex` for compiling .tex files into
 .pdf files.
 
@@ -8,7 +17,7 @@ npm install --save gulp-pdflatex2
 ```
 
 ## Usage
-```
+```javascript
 // gulp-rename is not required, but very helpful for redirecting your
 // .tex files to a specific output directory.
 var gulp = require('gulp');
