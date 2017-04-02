@@ -39,22 +39,28 @@ var filterStdout = function(stdout) {
 /**
  * This function creates a copy of process.env and adds/appends to the
  * TEXINPUTS environment variable for the pdflatex child environment.
- * @param {string} texInputs The formatted value to set the environment
- *                           variable to.
+ * @param {?Array.<string>=} texInputs The list of directories to append
+ *                                     the TEXINPUTS environment variable.
+ * @param {string} filePath The path of the original .tex file, which we
+ *                          will automatically look in.
  * @return {Object}
  */
-var getChildEnvironment = function(texInputs) {
+var getChildEnvironment = function(texInputs = [], filePath) {
   var env = {};
   for (var key in process.env) {
     env[key] = process.env[key];
   }
+  texInputs = texInputs.concat([path.dirname(filePath), '']).map(function(dir) {
+    return path.resolve(process.cwd(), dir);
+  }).join(':');
   env.TEXINPUTS = env.TEXINPUTS ? `${env.TEXINPUTS}:{texInputs}` : texInputs;
   return env;
 };
 
 /**
  * This function takes an Error object or error message and returns a
- * gutil.PluginError.
+ * gutil.PluginError. If null was passed to this function, then null will
+ * be returned by the function.
  * @param {?Error|string} data The Error object or error message
  * @return {?gutil.PluginError}
  */
@@ -64,16 +70,12 @@ var getError = function(data) {
 
 var pdflatex2 = function(options = {}) {
   return through.obj(function(file, encoding, callback) {
-    var stdout = '', stderr = '';
-    var filePath = file.path;
-    var parentDir = path.dirname(file.path);
-    var pathObject = path.parse(file.path);
-    var texInputs = (options.TEXINPUTS || []).concat([parentDir]).map((dir) => {
-      return path.resolve(process.cwd(), dir);
-    }).join(':') + ':';
     if (file.isNull()) {
-      return callback(getError(`Null file ${pathObject.base} received!`), file);
+      return callback(getError(`Null file ${file.path} received!`), file);
     }
+    // We will store the stdout and stderr of the pdflatex child process in
+    // case there is an error.
+    var stdout = '', stderr = '';
     // We will store the compiled files from pdflatex in a temporary directory.
     tmp.dir({ unsafeCleanup: true }, function(error, tmpDir, cleanup) {
       if (error) {
@@ -85,10 +87,10 @@ var pdflatex2 = function(options = {}) {
         '-file-line-error',
         '-halt-on-error',
         `-output-directory=${tmpDir}`,
-        filePath
+        file.path
       ], {
         cwd: tmpDir,
-        env: getChildEnvironment(texInputs)
+        env: getChildEnvironment(options.texInputs)
       });
       // This is a hack to prevent pdflatex from hanging when it expects input.
       file.pipe(pdflatex.stdin);
@@ -97,12 +99,13 @@ var pdflatex2 = function(options = {}) {
       // Once the pdflatex process is done, we read the compiled files into
       // a stream or buffer.
       pdflatex.on('close', function(code) {
+        // We need to get the path to the output PDF file in the temporary
+        // directory from before.
+        var pathObject = path.parse(file.path);
         var outputPath = path.join(tmpDir, pathObject.name + '.pdf');
-        file.path = path.format({
-          dir: pathObject.dir,
-          name: pathObject.name,
-          ext: '.pdf'
-        });
+        // If we are able to get a Stream or Buffer from the output PDF file,
+        // then compilation was successful, and we set the file contents to
+        // the contents of the output PDF file.
         if (file.isStream()) {
           try {
             file.contents = fs.createReadStream(outputPath);
@@ -118,12 +121,11 @@ var pdflatex2 = function(options = {}) {
         } else {
           error = `Error compiling ${p}!`;
         }
-        cleanup();
         // If there was an error, we log it and then throw the error.
         if (error) {
           gutil.log(
               gutil.colors.red('Error compiling'),
-              gutil.colors.cyan(filePath)
+              gutil.colors.cyan(file.path)
           );
           stdout = options.verbose ? stdout : filterStdout(stdout);
           gutil.log(
@@ -133,9 +135,13 @@ var pdflatex2 = function(options = {}) {
         } else {
           gutil.log(
               gutil.colors.green('Compiled'),
-              gutil.colors.cyan(filePath)
+              gutil.colors.cyan(file.path)
           );
         }
+        // We need to set the new file.path with a .pdf extension.
+        file.path = gutil.replaceExtension(file.path, '.pdf');
+        // Call the cleanup() callback to remove the temporary directory.
+        cleanup();
         return callback(getError(error), file);
       });
     });
