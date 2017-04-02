@@ -26,7 +26,7 @@ var pdflatex2 = require('gulp-pdflatex2');
 
 gulp.task('latex', function() {
   return gulp.src('./*.tex')
-    .pipe(pdflatex({
+    .pipe(pdflatex2({
       verbose: true,
       TEXINPUTS: ['./path/to/cls']
     }))
