@@ -9,7 +9,9 @@
 [![GitHub forks](https://img.shields.io/github/forks/omgimanerd/gulp-pdflatex2.svg?style=social&label=Fork)](https://github.com/omgimanerd/gulp-pdflatex2/fork)
 
 gulp-pdflatex2 is a wrapper around `pdflatex` for compiling .tex files into
-.pdf files.
+.pdf files. It is an improved version of
+[gulp-pdflatex](https://www.npmjs.com/package/gulp-pdflatex) that displays
+LaTeX compilation errors instead of suppressing them.
 
 ## Installation
 ```
