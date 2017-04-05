@@ -4,7 +4,7 @@
 
 var gulp = require('gulp');
 var rename = require('gulp-rename');
-var pdflatex = require('../gulp-pdflatex2');
+var pdflatex = require('./gulp-pdflatex2');
 
 gulp.task('default', ['test']);
 

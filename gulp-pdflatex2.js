@@ -13,30 +13,6 @@ const tmp = require('tmp');
 const PLUGIN_NAME = 'gulp-pdflatex2';
 
 /**
- * This function searches for lines matching file:line:error in the stdout
- * of the pdflatex process and returns them.
- * @param {string} stdout Output from the pdflatex subprocess
- * @return {string}
- */
-var filterStdout = function(stdout) {
-  stdout = stdout.split('\n');
-  var include = '';
-  var error = false;
-  for (var line of stdout) {
-    if (/[\w\d_\-\/.]+:[\d]+:.+/g.test(line)) {
-      if (error) {
-        include += line + '\n';
-      }
-      error = !error;
-    }
-    if (error) {
-      include += line + '\n';
-    }
-  }
-  return include;
-};
-
-/**
  * This function creates a copy of process.env and adds/appends to the
  * TEXINPUTS environment variable for the pdflatex child environment.
  * @param {?Array.<string>=} texInputs The list of directories to append
@@ -50,9 +26,9 @@ var getChildEnvironment = function(texInputs = [], filePath) {
   for (var key in process.env) {
     env[key] = process.env[key];
   }
-  texInputs = texInputs.concat([path.dirname(filePath), '']).map(function(dir) {
+  texInputs = texInputs.concat([path.dirname(filePath)]).map(function(dir) {
     return path.resolve(process.cwd(), dir);
-  }).join(':');
+  }).concat(['']).join(':');
   env.TEXINPUTS = env.TEXINPUTS ? `${env.TEXINPUTS}:{texInputs}` : texInputs;
   return env;
 };
@@ -90,7 +66,7 @@ var pdflatex2 = function(options = {}) {
         file.path
       ], {
         cwd: tmpDir,
-        env: getChildEnvironment(options.texInputs)
+        env: getChildEnvironment(options.TEXINPUTS, file.path)
       });
       // This is a hack to prevent pdflatex from hanging when it expects input.
       file.pipe(pdflatex.stdin);
@@ -127,7 +103,6 @@ var pdflatex2 = function(options = {}) {
               gutil.colors.red('Error compiling'),
               gutil.colors.cyan(file.path)
           );
-          stdout = options.verbose ? stdout : filterStdout(stdout);
           gutil.log(
               gutil.colors.red('pdflatex output:'),
               '\n' + stdout + stderr
@@ -142,7 +117,10 @@ var pdflatex2 = function(options = {}) {
         file.path = gutil.replaceExtension(file.path, '.pdf');
         // Call the cleanup() callback to remove the temporary directory.
         cleanup();
-        return callback(getError(error), file);
+        if (error) {
+          return callback(getError(error), null);
+        }
+        return callback(null, file);
       });
     });
   });
