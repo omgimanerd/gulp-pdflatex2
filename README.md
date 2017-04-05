@@ -29,7 +29,6 @@ var pdflatex2 = require('gulp-pdflatex2');
 gulp.task('latex', function() {
   return gulp.src('./*.tex')
     .pipe(pdflatex2({
-      verbose: true,
       TEXINPUTS: ['./path/to/cls']
     }))
     .pipe(rename(function(path) {
@@ -40,8 +39,6 @@ gulp.task('latex', function() {
 ```
 
 ## Options
-- `verbose`: optional, will output all stdout from pdflatex if there is an
-  error, defaults to false.
 - `TEXINPUTS`: optional, pass an array of directories for pdflatex to look
   in for files, useful if you have external class files.
 
