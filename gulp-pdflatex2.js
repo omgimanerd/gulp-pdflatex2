@@ -108,19 +108,16 @@ var pdflatex2 = function(options = {}) {
               '\n' + stdout + stderr
           );
         } else {
+          file.path = gutil.replaceExtension(file.path, '.pdf');
           gutil.log(
               gutil.colors.green('Compiled'),
               gutil.colors.cyan(file.path)
           );
         }
         // We need to set the new file.path with a .pdf extension.
-        file.path = gutil.replaceExtension(file.path, '.pdf');
         // Call the cleanup() callback to remove the temporary directory.
         cleanup();
-        if (error) {
-          return callback(getError(error), null);
-        }
-        return callback(null, file);
+        return callback(getError(error), file);
       });
     });
   });
