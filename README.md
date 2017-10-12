@@ -26,9 +26,10 @@ var gulp = require('gulp');
 var rename = require('gulp-rename');
 var pdflatex2 = require('gulp-pdflatex2');
 
-gulp.task('latex', function() {
+gulp.task('latex', () => {
   return gulp.src('./*.tex')
     .pipe(pdflatex2({
+      options: ['-shell-escape'],
       TEXINPUTS: ['./path/to/cls']
     }))
     .pipe(rename(function(path) {
@@ -39,8 +40,13 @@ gulp.task('latex', function() {
 ```
 
 ## Options
+- `options`: optional, pass an additional array of command line options to
+the `pdflatex` invocation. Be aware that this package by default specifies
+`-file-line-error`, `-halt-on-error`, and `-output-directory`. Overwriting
+these manually will result in unexpected behavior.
 - `TEXINPUTS`: optional, pass an array of directories for pdflatex to look
-  in for files, useful if you have external class files.
+  in for files, useful if you have external class files. This is populated
+  by default with the path of the file being piped to gulp.
 
 ## Author
 [![Libraries.io for GitHub](https://img.shields.io/badge/Alvin%20Lin-omgimanerd-blue.svg)](http://omgimanerd.tech)

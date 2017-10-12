@@ -56,17 +56,17 @@ const pdflatex2 = (options = {}) => {
       return callback(getError(`Null file ${file.path} received!`), file)
     }
 
+    let stdout = '', stderr = '', finalError = null
     const texInputs = options.TEXINPUTS || []
     const cliOptions = options.options || []
 
-    let stdout = '', stderr = ''
     // We will store the compiled files from pdflatex in a temporary directory.
     tmp.dir({ unsafeCleanup: true }, (error, tmpDir, cleanup) => {
       if (error) {
         return callback(getError(error), file)
       }
-      // We spawn a child process to run the pdflatex command and capture its
-      // Output.
+
+      // We spawn a child process to run the pdflatex command
       const pdflatex = childProcess.spawn('pdflatex', cliOptions.concat([
         '-file-line-error',
         '-halt-on-error',
@@ -76,39 +76,51 @@ const pdflatex2 = (options = {}) => {
         cwd: tmpDir,
         env: getChildEnvironment(texInputs, file.path)
       })
+
       // This is a hack to prevent pdflatex from hanging when it expects input.
       file.pipe(pdflatex.stdin)
       pdflatex.stdout.on('data', data => { stdout += data })
       pdflatex.stderr.on('data', data => { stderr += data })
-      // Once the pdflatex process is done, we read the compiled files into
-      // A stream or buffer.
+
+      /**
+       * Once the pdflatex process is done, we read the compiled files into
+       * A stream or buffer.
+       */
       pdflatex.on('close', () => {
-        let pdflatexError = error
-        // We need to get the path to the output PDF file in the temporary
-        // Directory from before.
+        /**
+         * We need to get the path to the output PDF file in the temporary
+         * Directory from before.
+         */
         const pathObject = path.parse(file.path)
         const outputPath = path.join(tmpDir, `${pathObject.name}.pdf`)
-        // If we are able to get a Stream or Buffer from the output PDF file,
-        // Then compilation was successful, and we set the file contents to
-        // The contents of the output PDF file.
+
+        /**
+         * If we are able to get a Stream or Buffer from the output PDF file,
+         * then compilation was successful, and we set the file contents to
+         * the contents of the output PDF file.
+         */
         if (file.isStream()) {
           try {
             file.contents = fs.createReadStream(outputPath)
           } catch (readStreamError) {
-            pdflatexError = readStreamError
+            finalError = readStreamError
           }
         } else if (file.isBuffer()) {
           try {
             // eslint-disable-next-line no-sync
             file.contents = fs.readFileSync(outputPath)
           } catch (readFileError) {
-            pdflatexError = readFileError
+            finalError = readFileError
           }
         } else {
-          pdflatexError = `Error compiling ${file.path}!`
+          finalError = `Error compiling ${file.path}!`
         }
-        // If there was an error, we log it and then return the error.
-        if (error) {
+
+        /**
+         * If there was an error, then we log it along with the stdout and
+         * stderr from the pdflatex invocation.
+         */
+        if (finalError) {
           gutil.log(
             gutil.colors.red('Error compiling'),
             gutil.colors.cyan(file.path)
@@ -124,13 +136,14 @@ const pdflatex2 = (options = {}) => {
             gutil.colors.cyan(file.path)
           )
         }
+
         // We need to set the new file.path with a .pdf extension.
         // Call the cleanup() callback to remove the temporary directory.
         cleanup()
-        return callback(getError(pdflatexError), file)
+        return callback(getError(finalError), file)
       })
     })
   })
 }
 
-module.exports = pdflatex2
+module.exports = exports = pdflatex2
