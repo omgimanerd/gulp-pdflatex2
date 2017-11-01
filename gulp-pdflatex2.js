@@ -28,7 +28,7 @@ const getChildEnvironment = (texInputs, filePath) => {
   }
   const fullPaths = texInputs.map(dir => {
     return path.resolve(process.cwd(), dir)
-  }).concat([filePath, '']).join(':')
+  }).concat([path.dirname(filePath), '']).join(':')
   env.TEXINPUTS = env.TEXINPUTS ? `${env.TEXINPUTS}:${fullPaths}` : fullPaths
   return env
 }
