@@ -11,8 +11,9 @@ gulp.task('default', ['test'])
 gulp.task('test', () => {
   return gulp.src('./tests/*.tex')
     .pipe(pdflatex({
-      options: ['-shell-escape'],
-      TEXINPUTS: ['./tests/cls']
+      cliOptions: ['-shell-escape'],
+      keepIntermediateFiles: './tmp',
+      texInputs: ['./tests/cls']
     }))
     .pipe(rename(path => {
       path.dirname += '/output'

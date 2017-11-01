@@ -4,7 +4,7 @@
  */
 
 const childProcess = require('child_process')
-const fs = require('fs')
+const fs = require('fs-extra')
 const gutil = require('gulp-util')
 const path = require('path')
 const through = require('through2')
@@ -26,10 +26,10 @@ const getChildEnvironment = (texInputs, filePath) => {
   for (const key in process.env) {
     env[key] = process.env[key]
   }
-  const fullPaths = texInputs.concat([path.dirname(filePath)]).map(dir => {
+  const fullPaths = texInputs.map(dir => {
     return path.resolve(process.cwd(), dir)
-  }).concat(['']).join(':')
-  env.TEXINPUTS = env.TEXINPUTS ? `${env.TEXINPUTS}:{texInputs}` : fullPaths
+  }).concat([filePath, '']).join(':')
+  env.TEXINPUTS = env.TEXINPUTS ? `${env.TEXINPUTS}:${fullPaths}` : fullPaths
   return env
 }
 
@@ -57,8 +57,9 @@ const pdflatex2 = (options = {}) => {
     }
 
     let stdout = '', stderr = '', finalError = null
-    const texInputs = options.TEXINPUTS || []
-    const cliOptions = options.options || []
+    const cliOptions = options.cliOptions || []
+    const keepIntermediateFiles = options.keepIntermediateFiles || false
+    const texInputs = options.texInputs || []
 
     // We will store the compiled files from pdflatex in a temporary directory.
     tmp.dir({ unsafeCleanup: true }, (error, tmpDir, cleanup) => {
@@ -79,17 +80,18 @@ const pdflatex2 = (options = {}) => {
 
       // This is a hack to prevent pdflatex from hanging when it expects input.
       file.pipe(pdflatex.stdin)
+      // Collect the output from stdout and stderr.
       pdflatex.stdout.on('data', data => { stdout += data })
       pdflatex.stderr.on('data', data => { stderr += data })
 
       /**
        * Once the pdflatex process is done, we read the compiled files into
-       * A stream or buffer.
+       * a stream or buffer.
        */
       pdflatex.on('close', () => {
         /**
          * We need to get the path to the output PDF file in the temporary
-         * Directory from before.
+         * directory from before.
          */
         const pathObject = path.parse(file.path)
         const outputPath = path.join(tmpDir, `${pathObject.name}.pdf`)
@@ -116,6 +118,20 @@ const pdflatex2 = (options = {}) => {
           finalError = `Error compiling ${file.path}!`
         }
 
+        /*
+         * If we want to keep the intermediate generated files, then we copy
+         * them before cleanup.
+         */
+        if (keepIntermediateFiles) {
+          const outputDir = path.join(process.cwd(), keepIntermediateFiles)
+          try {
+            // eslint-disable-next-line no-sync
+            fs.copySync(tmpDir, outputDir)
+          } catch (copyError) {
+            finalError = copyError
+          }
+        }
+
         /**
          * If there was an error, then we log it along with the stdout and
          * stderr from the pdflatex invocation.
@@ -130,6 +146,7 @@ const pdflatex2 = (options = {}) => {
             `\n${stdout}${stderr}`
           )
         } else {
+          // We need to set the new file.path with a .pdf extension.
           file.path = gutil.replaceExtension(file.path, '.pdf')
           gutil.log(
             gutil.colors.green('Compiled'),
@@ -137,10 +154,13 @@ const pdflatex2 = (options = {}) => {
           )
         }
 
-        // We need to set the new file.path with a .pdf extension.
-        // Call the cleanup() callback to remove the temporary directory.
+        /**
+         * Call the cleanup() callback to remove the temporary directory
+         * and invoke the through2 callback with the final propagated error
+         * and the resulting file.
+         */
         cleanup()
-        return callback(getError(finalError), file)
+        callback(getError(finalError), file)
       })
     })
   })

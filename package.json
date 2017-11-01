@@ -4,6 +4,7 @@
   "description": "A gulp-plugin for compiling .tex files to .pdf files",
   "main": "gulp-pdflatex2.js",
   "dependencies": {
+    "fs-extra": "^4.0.2",
     "gulp-util": "^3.0.8",
     "through2": "^2.0.3",
     "tmp": "^0.0.31"
