@@ -1,6 +1,6 @@
 {
   "name": "gulp-pdflatex2",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "description": "A gulp-plugin for compiling .tex files to .pdf files",
   "main": "gulp-pdflatex2.js",
   "dependencies": {
