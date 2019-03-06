@@ -44,9 +44,10 @@ gulp.task('latex', () => {
 
 ## Options
 - `cliOptions`: optional, pass an additional array of command line options to
-the `pdflatex` invocation. Be aware that this package by default specifies
-`-file-line-error`, `-halt-on-error`, and `-output-directory`. Overwriting
-these manually will result in unexpected behavior.
+  the `pdflatex` invocation. Be aware that this package by default specifies
+  `-file-line-error`, `-halt-on-error`, `-interaction=nonstopmode`
+  and `-output-directory`. Overwriting these manually will result in unexpected
+  behavior.
 - `keepIntermediateFiles`: optional, pass a directory, relative to the path of
   the gulpfile for the intermediate `.aux`, `.log`, `.toc`, and other
   miscellaneous files to be stored in.
