@@ -71,6 +71,7 @@ const pdflatex2 = (options = {}) => {
       const pdflatex = childProcess.spawn('pdflatex', cliOptions.concat([
         '-file-line-error',
         '-halt-on-error',
+        '-interaction=nonstopmode',
         `-output-directory=${tmpDir}`,
         file.path
       ]), {
