@@ -78,8 +78,6 @@ const pdflatex2 = (options = {}) => {
         env: getChildEnvironment(texInputs, file.path)
       })
 
-      // This is a hack to prevent pdflatex from hanging when it expects input.
-      file.pipe(pdflatex.stdin)
       // Collect the output from stdout and stderr.
       pdflatex.stdout.on('data', data => { stdout += data })
       pdflatex.stderr.on('data', data => { stderr += data })
