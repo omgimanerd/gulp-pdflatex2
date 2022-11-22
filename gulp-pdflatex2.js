@@ -19,17 +19,27 @@ const PLUGIN_NAME = 'gulp-pdflatex2'
  *                                  the TEXINPUTS environment variable.
  * @param {string} filePath The path of the original .tex file, which we
  *                          will automatically append to TEXINPUTS.
+ * @param {string} separator The separator to use between paths, which
+ *                           is ':' on Unix and ';' on Windows. Defaults
+ *                           to ':'.
  * @return {Object}
  */
-const getChildEnvironment = (texInputs, filePath) => {
-  const env = {}
-  for (const key in process.env) {
-    env[key] = process.env[key]
-  }
-  const fullPaths = texInputs.map(dir => {
+const getChildEnvironment = (texInputs, filePath, separator) => {
+  const env = { ...process.env }
+  separator = separator || ':'
+  // The TEXINPUTS environment variable is extremely strange and cannot
+  // seem to handle an empty path between the separator tokens. It also
+  // MUST end with the separator token on Windows or it will not be
+  // able to load the specified directory. Therefore, we will tokenize
+  // the existing TEXINPUTS variables and reformat it ourselves.
+  const existingPaths = env.TEXINPUTS.split(separator).filter(Boolean)
+  // Add the additional TEXINPUTS paths to the existing paths, the current
+  // path, and an empty string at the end to ensure the joined string
+  // ends with the separator.
+  const fullPaths = existingPaths.concat(texInputs.map(dir => {
     return path.resolve(process.cwd(), dir)
-  }).concat([path.dirname(filePath), '']).join(':')
-  env.TEXINPUTS = env.TEXINPUTS ? `${env.TEXINPUTS}:${fullPaths}` : fullPaths
+  })).concat([path.dirname(filePath), ''])
+  env.TEXINPUTS = fullPaths.join(separator)
   return env
 }
 
@@ -60,6 +70,7 @@ const pdflatex2 = (options = {}) => {
     const cliOptions = options.cliOptions || []
     const keepIntermediateFiles = options.keepIntermediateFiles || false
     const texInputs = options.texInputs || []
+    const separator = options.separator || ':'
 
     // We will store the compiled files from pdflatex in a temporary directory.
     tmp.dir({ unsafeCleanup: true }, (error, tmpDir, cleanup) => {
@@ -76,7 +87,7 @@ const pdflatex2 = (options = {}) => {
         file.path
       ]), {
         cwd: tmpDir,
-        env: getChildEnvironment(texInputs, file.path)
+        env: getChildEnvironment(texInputs, file.path, separator)
       })
 
       // Collect the output from stdout and stderr.
